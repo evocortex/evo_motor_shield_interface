@@ -1,0 +1,77 @@
+<launch>
+  <group ns="Motor1">
+    <param name="Type"                  value="2"      />
+    <param name="ControlMode"           value="2"      />
+    <param name="PWMMax"                value="100.0"    />
+    <param name="GearRatio"             value="22.4"   />
+    <param name="EncoderResolution"     value="1024"   />
+    <param name="MMPerRev"              value="1.0"    />
+    <param name="LiftConvFacMMPerTick"  value="0.0"    />
+    <param name="LiftOffsMM"            value="0.0"    />
+    <param name="PosKp"                 value="0.0"  />
+    <param name="PosKi"                 value="0.0"  />
+    <param name="PosKd"                 value="0.0"  />
+    <param name="SpeedKp"               value="0.1"    />
+    <param name="SpeedKi"               value="5.0"    />
+    <param name="SpeedKd"               value="0.0"  />
+  </group>
+
+  <group ns="Motor2">
+    <param name="Type"                  value="2"      />
+    <param name="ControlMode"           value="2"      />
+    <param name="PWMMax"                value="100.0"    />
+    <param name="GearRatio"             value="22.4"   />
+    <param name="EncoderResolution"     value="1024"   />
+    <param name="MMPerRev"              value="1.0"    />
+    <param name="LiftConvFacMMPerTick"  value="0.0"    />
+    <param name="LiftOffsMM"            value="0.0"    />
+    <param name="PosKp"                 value="0.0"  />
+    <param name="PosKi"                 value="0.0"  />
+    <param name="PosKd"                 value="0.0"  />
+    <param name="SpeedKp"               value="0.5"    />
+    <param name="SpeedKi"               value="5.0"    />
+    <param name="SpeedKd"               value="0.005"  />
+  </group>
+
+  <group ns="Motor3">
+    <param name="Type"                  value="2"      />
+    <param name="ControlMode"           value="2"      />
+    <param name="PWMMax"                value="100.0"    />
+    <param name="GearRatio"             value="22.4"   />
+    <param name="EncoderResolution"     value="1024"   />
+    <param name="MMPerRev"              value="1.0"    />
+    <param name="LiftConvFacMMPerTick"  value="0.0"    />
+    <param name="LiftOffsMM"            value="0.0"    />
+    <param name="PosKp"                 value="0.0"  />
+    <param name="PosKi"                 value="0.0"  />
+    <param name="PosKd"                 value="0.0"  />
+    <param name="SpeedKp"               value="0.5"    />
+    <param name="SpeedKi"               value="5.0"    />
+    <param name="SpeedKd"               value="0.005"  />
+  </group>
+
+  <group ns="Motor4">
+    <param name="Type"                  value="2"    />
+    <param name="ControlMode"           value="2"    />
+    <param name="PWMMax"                value="100.0" />
+    <param name="GearRatio"             value="22.4" />
+    <param name="EncoderResolution"     value="1024" />
+    <param name="MMPerRev"              value="1.0"  />
+    <param name="LiftConvFacMMPerTick"  value="0.0" />
+    <param name="LiftOffsMM"            value="0.0"  />
+    <param name="PosKp"                 value="0.0"  />
+    <param name="PosKi"                 value="0.0"  />
+    <param name="PosKd"                 value="0.0"  />
+    <param name="SpeedKp"               value="0.5"  />
+    <param name="SpeedKi"               value="5.0"  />
+    <param name="SpeedKd"               value="0.005"  />
+  </group>
+
+  <node name="MotorShieldTestNode" pkg="evo_motor_shield_interface" type="evo_motor_shield_interface_test_node" output="screen" >
+    <param name="CAN"             value="can_motor" />
+    <param name="FirstID"         value="1"      />
+    <param name="NumControllers"  value="2"      />
+    <param name="TimeoutMS"       value="300"     />
+  </node>
+    
+</launch>
