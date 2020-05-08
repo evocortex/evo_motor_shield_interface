@@ -102,6 +102,16 @@ class Motor
    const bool setPWMLimit(const float pwm_max_value);
 
    /**
+    * @brief Set speed limit (only for type drive)
+    * 
+    * @param speed_max_rpm Sets the maximum allowed speed value
+    * 
+    * @return true Success
+    * @return false Error
+    */
+   const bool setMaxSpeed(const float speed_max_rpm);
+
+   /**
     * @brief Set the drive control mode
     *
     * @param mode @ref MotorControlMode
@@ -131,17 +141,6 @@ class Motor
     * @return false Error
     */
    const bool setEncoderResolution(const uint16_t encoder_reso);
-
-   /**
-    * @brief Set the conversion factor mm/revolution for position
-    *        calculation
-    *
-    * @param conv_fac_mm_per_rev MM per wheel revolution (w/o gearbox)
-    *
-    * @return true Success
-    * @return false Error
-    */
-   // const bool setConvFacMMPerRev(const float conv_fac_mm_per_rev);
 
    /**
     * @brief Sets the conversion factor from adc tick/raw value to mm (mm/tick)
@@ -282,6 +281,7 @@ class Motor
    const float getPositionMM(void);
    const float getRevolutions(void);
    const float getSpeedRPM(void);
+   const float getMaxSpeedRPM(void) const;
 
  private:
    /**
@@ -339,6 +339,8 @@ class Motor
    ComDataObject _speed_kd;       //!< Speed controller Kd value
    ComDataObject
        _reset_revs; //!< Resets the traveled distance to the specified value
+
+   float _speed_max_rpm;   //!< Maximum allowed speed in rpm
 
    /* Status of the drive */
    ComDataObject _current;     //!< Current in ampere

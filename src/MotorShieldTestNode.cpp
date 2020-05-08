@@ -140,6 +140,7 @@ class ROSMotor
    int _type                        = 0;    //!< Type of the drive
    int _control_mode                = 0;    //!< Control mode of the drive
    float _pwm_max                   = 0.0f; //!< Maximum allowed PWM value
+   float _speed_max_rpm             = 1000.0f; //!< Maximum allowed speed in rpm
    float _gear_ratio                = 0.0f; //!< Gear ratio of the drive
    int _encoder_resolution          = 0;    //!< Resolution of the encoder
    float _mm_per_rev                = 0.0f; //!< MM per wheel revolution
@@ -304,6 +305,7 @@ void App::readMotorShieldConfig(void)
       _nh.getParam(drive_name + "Type", motor._type);
       _nh.getParam(drive_name + "ControlMode", motor._control_mode);
       _nh.getParam(drive_name + "PWMMax", motor._pwm_max);
+      _nh.getParam(drive_name + "SpeedMax", motor._speed_max_rpm);
       _nh.getParam(drive_name + "GearRatio", motor._gear_ratio);
       _nh.getParam(drive_name + "EncoderResolution", motor._encoder_resolution);
       _nh.getParam(drive_name + "MMPerRev", motor._mm_per_rev);
@@ -345,6 +347,8 @@ const bool App::initMotorShields(void)
          if(!drive->setType(static_cast<MotorType>(motor._type)))
             return false;
          if(!drive->setPWMLimit(motor._pwm_max))
+            return false;
+         if(!drive->setMaxSpeed(motor._speed_max_rpm))
             return false;
          if(!drive->setControlMode(
                 static_cast<MotorControlMode>(motor._control_mode)))
