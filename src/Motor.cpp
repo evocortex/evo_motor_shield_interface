@@ -75,6 +75,34 @@ const bool Motor::setPWMLimit(const float pwm_max_value)
    return true;
 }
 
+const bool Motor::setMaxSpeed(const float speed_max_rpm)
+{
+   if(!_is_initialized)
+   {
+      LOG_ERROR("Class is not initialized!");
+      return false;
+   }
+
+   // Only positive values are allowed (absolute speed limit)
+   if(speed_max_rpm < 0.0)
+   {
+      LOG_ERROR("Maximum speed is an absolute value. " 
+                "Limit must be greater or equal 0.0 rpm!");
+      return false;
+   }
+
+   // CRC lock not necessarry -> only local parameter
+
+   // Set speed limit
+   _speed_max_rpm = speed_max_rpm;
+
+   // Check if current speed value has to be limited
+   if(fabs(static_cast<float>(_tgt_speed)) > _speed_max_rpm)
+      return setTargetSpeed(_speed_max_rpm);
+
+   return true;
+}
+
 const bool Motor::setControlMode(const MotorControlMode mode)
 {
    if(!_is_initialized)
@@ -373,7 +401,7 @@ const bool Motor::setTargetSpeed(const float value)
 
    if(MOTOR_SHIELD_STS_OK != _motor_shield.getState())
    {
-
+      
       _tgt_speed = 0.0f;
 
       return false;
@@ -383,6 +411,20 @@ const bool Motor::setTargetSpeed(const float value)
    {
       LOG_WARN("Cannot set speed -> Drive is disabled!");
       return false;
+   }
+
+   // Limit speed -> only for type drive
+   if(static_cast<MotorType>((uint8_t)_type) == MOTOR_TYPE_DRIVE)
+   {
+      if(fabsf(value) > _speed_max_rpm)
+      {
+         // Generate warning -> no error
+         // Old speed is maintained
+
+         LOG_WARN("Requested speed " << value << " rpm is higher than speed limit "
+                   << _speed_max_rpm << " rpm");
+         return false;
+      }
    }
 
    if(_tgt_speed.getDataUpdated())
@@ -458,6 +500,11 @@ const float Motor::getSpeedRPM(void)
    return static_cast<float>(_speed);
 }
 
+const float Motor::getMaxSpeedRPM(void) const
+{
+   return _speed_max_rpm;
+}
+
 /* !Public Class Functions -------------------------------------------------------*/
 
 /* Private Class Functions -------------------------------------------------------*/
@@ -490,6 +537,7 @@ Motor::Motor(const unsigned int id, MotorShield& shield, const bool logging) :
     _speed_ki(MSO_M_PARAM_BASE_IDX + (id * 1000u) + MO_SPD_KI, true, float(0)),
     _speed_kd(MSO_M_PARAM_BASE_IDX + (id * 1000u) + MO_SPD_KD, true, float(0)),
     _reset_revs(MSO_M_PARAM_BASE_IDX + (id * 1000u) + MO_RESET_REVS, true, float(0)),
+    _speed_max_rpm(std::numeric_limits<float>::max()),
 
     _current(MSO_M_PARAM_BASE_IDX + (id * 1000u) + MO_CURRENT, false, float(0)),
     _position(MSO_M_PARAM_BASE_IDX + (id * 1000u) + MO_POS, false, float(0)),
