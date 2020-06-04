@@ -75,7 +75,7 @@ const bool Motor::setPWMLimit(const float pwm_max_value)
    return true;
 }
 
-const bool Motor::setMaxSpeed(const float speed_max_rpm)
+const bool Motor::setMaxSpeedRPM(const float speed_max_rpm)
 {
    if(!_is_initialized)
    {
@@ -390,7 +390,10 @@ const bool Motor::setTargetPWM(const float value)
 
    return true;
 }
-
+   /* REV
+   *  MMA ERROR: setTargetSpeedRPM would be precise. rad/s could be an alternative..
+   *  
+   */
 const bool Motor::setTargetSpeed(const float value)
 {
    if(!_is_initialized)

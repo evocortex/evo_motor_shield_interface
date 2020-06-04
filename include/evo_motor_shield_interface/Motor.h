@@ -109,7 +109,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setMaxSpeed(const float speed_max_rpm);
+   const bool setMaxSpeedRPM(const float speed_max_rpm);
 
    /**
     * @brief Set the drive control mode

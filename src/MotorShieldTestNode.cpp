@@ -348,7 +348,7 @@ const bool App::initMotorShields(void)
             return false;
          if(!drive->setPWMLimit(motor._pwm_max))
             return false;
-         if(!drive->setMaxSpeed(motor._speed_max_rpm))
+         if(!drive->setMaxSpeedRPM(motor._speed_max_rpm))
             return false;
          if(!drive->setControlMode(
                 static_cast<MotorControlMode>(motor._control_mode)))
