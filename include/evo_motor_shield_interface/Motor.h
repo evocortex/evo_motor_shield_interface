@@ -89,7 +89,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setType(const MotorType type);
+   bool setType(const MotorType type);
 
    /**
     * @brief Sets the maximum allowed PWM value
@@ -99,7 +99,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setPWMLimit(const float pwm_max_value);
+   bool setPWMLimit(const float pwm_max_value);
 
    /**
     * @brief Set speed limit (only for type drive)
@@ -109,7 +109,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setMaxSpeedRPM(const float speed_max_rpm);
+   bool setMaxSpeedRPM(const float speed_max_rpm);
 
    /**
     * @brief Set the drive control mode
@@ -119,7 +119,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setControlMode(const MotorControlMode mode);
+   bool setControlMode(const MotorControlMode mode);
 
    /**
     * @brief Sets the gear ratio of the drive
@@ -130,7 +130,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setGearRatio(const float gear_ratio);
+   bool setGearRatio(const float gear_ratio);
 
    /**
     * @brief Sets the encoder resolution of the drive
@@ -140,7 +140,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setEncoderResolution(const uint16_t encoder_reso);
+   bool setEncoderResolution(const uint16_t encoder_reso);
 
    /**
     * @brief Sets the conversion factor from adc tick/raw value to mm (mm/tick)
@@ -150,7 +150,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setConvFacAdcMMPerTick(const float conv_fac_adc_mm_per_tick);
+   bool setConvFacAdcMMPerTick(const float conv_fac_adc_mm_per_tick);
 
    /**
     * @brief Sets an offset value in mm for position calculation via ADC sensor
@@ -160,7 +160,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setOffsAdcMM(const float offs_adc_mm);
+   bool setOffsAdcMM(const float offs_adc_mm);
 
    /**
     * @brief Set the P-part of the position controller
@@ -170,7 +170,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setPositionKp(const float kp);
+   bool setPositionKp(const float kp);
 
    /**
     * @brief Set the P-part of the position controller
@@ -180,7 +180,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setPositionKi(const float ki);
+   bool setPositionKi(const float ki);
 
    /**
     * @brief Set the D-part of the position controller
@@ -190,7 +190,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setPositionKd(const float kd);
+   bool setPositionKd(const float kd);
 
    /**
     * @brief Set the P-part of the speed controller
@@ -200,7 +200,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setSpeedKp(const float kp);
+   bool setSpeedKp(const float kp);
 
    /**
     * @brief Set the I-part of the speed controller
@@ -210,7 +210,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setSpeedKi(const float ki);
+   bool setSpeedKi(const float ki);
 
    /**
     * @brief Set the D-part of the speed controller
@@ -220,7 +220,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setSpeedKd(const float kd);
+   bool setSpeedKd(const float kd);
 
    /**
     * @brief Sets the operation status of the drive enable/disable
@@ -230,7 +230,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setOperationStatus(const MotorStatus state);
+   bool setOperationStatus(const MotorStatus state);
 
    /**
     * @brief Resets the revolution counter to the
@@ -240,7 +240,7 @@ class Motor
     *
     * @return const Result
     */
-   const bool resetRevs(const float init_revs = 0.0f);
+   bool resetRevs(const float init_revs = 0.0f);
 
    /**
     * @brief Set target pwm value in percent
@@ -251,7 +251,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setTargetPWM(const float value);
+   bool setTargetPWM(const float value);
 
    /**
     * @brief Set target speed in rpm
@@ -261,7 +261,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setTargetSpeed(const float value);
+   bool setTargetSpeed(const float value);
 
    /**
     * @brief Set target position in mm
@@ -271,17 +271,17 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool setTargetPosition(const float value);
+   bool setTargetPosition(const float value);
 
    /* Getters */
-   const MotorStatus getOperationStatus(void);
-   const MotorType getType(void);
+   MotorStatus getOperationStatus(void);
+   MotorType getType(void);
 
-   const float getCurrentAmp(void);
-   const float getPositionMM(void);
-   const float getRevolutions(void);
-   const float getSpeedRPM(void);
-   const float getMaxSpeedRPM(void) const;
+   float getCurrentAmp(void);
+   float getPositionMM(void);
+   float getRevolutions(void);
+   float getSpeedRPM(void);
+   float getMaxSpeedRPM(void) const;
 
  private:
    /**
@@ -299,7 +299,7 @@ class Motor
     * @return true Success
     * @return false Error
     */
-   const bool init(void);
+   bool init(void);
 
    /**
     * @brief Releases the drive
@@ -349,7 +349,7 @@ class Motor
    ComDataObject _revolutions; //!< Current revolutions (output shaft)
 
    /** \brief Logging option: set to true to enable logging */
-   const bool _logging = false;
+   bool _logging = false;
 
    /** \brief Logging module name */
    std::string _log_module = "Motor";
