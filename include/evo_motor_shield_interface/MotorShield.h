@@ -250,9 +250,9 @@ class MotorShield
     * @brief Calculates the CRC32 value of the
     *        configuration parameters
     *
-    * @return const uint32_t CRC32 value of config
+    * @return uint32_t CRC32 value of config
     */
-   const uint32_t calcConfigCRC(void);
+   uint32_t calcConfigCRC(void);
 
    /** \brief Used communication server */
    std::shared_ptr<ComServer> _com_server;

@@ -540,7 +540,7 @@ void MotorShield::checkShieldStatus(void)
    _timeout_error_cnt_prev = timeout_error_cnt;
 }
 
-const uint32_t MotorShield::calcConfigCRC(void)
+uint32_t MotorShield::calcConfigCRC(void)
 {
    uint32_t data[MSO_OBJ_SIZE] = {0};
    uint16_t idx                = 0;
