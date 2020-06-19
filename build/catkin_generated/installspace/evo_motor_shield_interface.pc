@@ -1,8 +1,0 @@
-prefix=/usr/local
-
-Name: evo_motor_shield_interface
-Description: Description of evo_motor_shield_interface
-Version: 1.0.0
-Cflags: -I${prefix}/include
-Libs: -L${prefix}/lib -levo_motor_shield_interface
-Requires: 

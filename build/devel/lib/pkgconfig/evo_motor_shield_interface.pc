@@ -1,8 +1,0 @@
-prefix=/home/konstanze/evo_motor_shield_interface/build/devel
-
-Name: evo_motor_shield_interface
-Description: Description of evo_motor_shield_interface
-Version: 1.0.0
-Cflags: -I/home/konstanze/evo_motor_shield_interface/include
-Libs: -L${prefix}/lib -levo_motor_shield_interface
-Requires: 
