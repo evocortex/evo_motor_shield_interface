@@ -146,7 +146,7 @@ class MotorShield
     * @return true Success
     * @return false Error
     */
-   const bool init(void);
+   bool init(void);
 
    /**
     * @brief Releases the object stops threads and releases
@@ -163,7 +163,7 @@ class MotorShield
     * @return true
     * @return false
     */
-   const bool resyncShield(void);
+   bool resyncShield(void);
 
    /**
     * @brief Sends request to perform a complete reset of the motorcontroller
@@ -171,7 +171,7 @@ class MotorShield
     * @return true
     * @return false
     */
-   const bool resetShield(void);
+   bool resetShield(void);
 
    /**
     * @brief Set maximum communication timeout
@@ -181,7 +181,7 @@ class MotorShield
     * @return true
     * @return false
     */
-   const bool setComTimeout(const uint32_t com_timeout_ms);
+   bool setComTimeout(const uint32_t com_timeout_ms);
 
    /**
     * @brief Sets the PWM frequency of the powerstage (NOT SUPPORTED YET)
@@ -203,11 +203,11 @@ class MotorShield
    std::shared_ptr<Motor> getMotor(const unsigned int id);
 
    /* Getters */
-   const float getComID(void) const;
-   const MotorShieldState getState(void) const;
+   float getComID(void) const;
+   MotorShieldState getState(void) const;
 
    /** \brief Check if class is initialized */
-   const bool isInitialized(void) const;
+   bool isInitialized(void) const;
 
  private:
    /**
@@ -223,7 +223,7 @@ class MotorShield
     * @return true Reading data was successful
     * @return false Failed reading data
     */
-   const bool readConstObject(ComDataObject& object);
+   bool readConstObject(ComDataObject& object);
 
    /**
     * @brief Writes a data object via can
@@ -234,7 +234,7 @@ class MotorShield
     * @return true Successfully written value
     * @return false Error during writting
     */
-   const bool writeDataObject(ComDataObject& object, const std::string name);
+   bool writeDataObject(ComDataObject& object, const std::string name);
 
    /**
     * @brief Checks if shield and host is synchronized
@@ -250,9 +250,9 @@ class MotorShield
     * @brief Calculates the CRC32 value of the
     *        configuration parameters
     *
-    * @return const uint32_t CRC32 value of config
+    * @return uint32_t CRC32 value of config
     */
-   const uint32_t calcConfigCRC(void);
+   uint32_t calcConfigCRC(void);
 
    /** \brief Used communication server */
    std::shared_ptr<ComServer> _com_server;

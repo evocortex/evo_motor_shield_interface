@@ -175,7 +175,7 @@ class App
     * @return true Success
     * @return false Error
     */
-   const bool init(void);
+   bool init(void);
 
    /**
     * @brief Runs the app (blocking mode)
@@ -183,7 +183,7 @@ class App
     * @return true App exits without error
     * @return false App exits due to an error
     */
-   const bool run(void);
+   bool run(void);
 
  private:
    /** \brief Reads general config from ros param server */
@@ -193,7 +193,7 @@ class App
    void readMotorShieldConfig(void);
 
    /** \brief Initializes the motorshields */
-   const bool initMotorShields(void);
+   bool initMotorShields(void);
 
    ros::NodeHandle& _nh; //!< Node handle
 
@@ -226,7 +226,7 @@ App::~App(void)
    _com_server->release();
 }
 
-const bool App::init(void)
+bool App::init(void)
 {
    readGeneralConfig();
 
@@ -243,7 +243,7 @@ const bool App::init(void)
    return true;
 }
 
-const bool App::run(void)
+bool App::run(void)
 {
    ros::Rate loop_rate(50.0);
 
@@ -323,7 +323,7 @@ void App::readMotorShieldConfig(void)
    }
 }
 
-const bool App::initMotorShields(void)
+bool App::initMotorShields(void)
 {
    unsigned int drive_idx = 0u;
 

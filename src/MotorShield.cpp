@@ -50,7 +50,7 @@ MotorShield::~MotorShield(void)
    release();
 }
 
-const bool MotorShield::init(void)
+bool MotorShield::init(void)
 {
    if(_is_initialized)
    {
@@ -201,7 +201,7 @@ void MotorShield::release(void)
    _is_initialized = false;
 }
 
-const bool MotorShield::resyncShield(void)
+bool MotorShield::resyncShield(void)
 {
    if(_is_shield_synced)
       return true;
@@ -264,7 +264,7 @@ const bool MotorShield::resyncShield(void)
    return true;
 }
 
-const bool MotorShield::setComTimeout(const uint32_t com_timeout_ms)
+bool MotorShield::setComTimeout(const uint32_t com_timeout_ms)
 {
    // Lock CRC calculation
    std::lock_guard<std::mutex> guard(_config_mutex);
@@ -300,17 +300,17 @@ std::shared_ptr<Motor> MotorShield::getMotor(const unsigned int id)
    return _motor_list[id];
 }
 
-const float MotorShield::getComID(void) const
+float MotorShield::getComID(void) const
 {
    return _com_node_id;
 }
 
-const MotorShieldState MotorShield::getState(void) const
+MotorShieldState MotorShield::getState(void) const
 {
    return _motor_shield_state;
 }
 
-const bool MotorShield::isInitialized(void) const
+bool MotorShield::isInitialized(void) const
 {
    return _is_initialized;
 }
@@ -350,7 +350,7 @@ void MotorShield::updateHandler(void)
    }
 }
 
-const bool MotorShield::readConstObject(ComDataObject& object)
+bool MotorShield::readConstObject(ComDataObject& object)
 {
    std::lock_guard<std::mutex> guard(_com_mutex);
 
@@ -389,7 +389,7 @@ const bool MotorShield::readConstObject(ComDataObject& object)
    return false;
 }
 
-const bool MotorShield::writeDataObject(ComDataObject& object,
+bool MotorShield::writeDataObject(ComDataObject& object,
                                         const std::string name)
 {
    std::lock_guard<std::mutex> guard(_com_mutex);
@@ -540,7 +540,7 @@ void MotorShield::checkShieldStatus(void)
    _timeout_error_cnt_prev = timeout_error_cnt;
 }
 
-const uint32_t MotorShield::calcConfigCRC(void)
+uint32_t MotorShield::calcConfigCRC(void)
 {
    uint32_t data[MSO_OBJ_SIZE] = {0};
    uint16_t idx                = 0;
