@@ -349,7 +349,7 @@ class Motor
    ComDataObject _revolutions; //!< Current revolutions (output shaft)
 
    /** \brief Logging option: set to true to enable logging */
-   bool _logging = false;
+   const bool _logging = false;
 
    /** \brief Logging module name */
    std::string _log_module = "Motor";
