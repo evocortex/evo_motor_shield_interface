@@ -211,6 +211,13 @@ bool MotorShield::resyncShield(void)
 
    for(auto motor : _motor_list)
    {
+      // Reset target values
+      motor->_tgt_pwm = 0.0f;
+      motor->_tgt_pwm.setDataUpdated();
+
+      motor->_tgt_speed = 0.0f;
+      motor->_tgt_speed.setDataUpdated();
+      
       if(!motor->setType(static_cast<MotorType>((uint8_t) motor->_type)))
          return false;
 
