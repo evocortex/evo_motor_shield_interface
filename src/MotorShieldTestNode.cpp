@@ -140,6 +140,7 @@ class ROSMotor
    int _type                        = 0;    //!< Type of the drive
    int _control_mode                = 0;    //!< Control mode of the drive
    float _pwm_max                   = 0.0f; //!< Maximum allowed PWM value
+   float _speed_max_rpm             = 1000.0f; //!< Maximum allowed speed in rpm
    float _gear_ratio                = 0.0f; //!< Gear ratio of the drive
    int _encoder_resolution          = 0;    //!< Resolution of the encoder
    float _mm_per_rev                = 0.0f; //!< MM per wheel revolution
@@ -174,7 +175,7 @@ class App
     * @return true Success
     * @return false Error
     */
-   const bool init(void);
+   bool init(void);
 
    /**
     * @brief Runs the app (blocking mode)
@@ -182,7 +183,7 @@ class App
     * @return true App exits without error
     * @return false App exits due to an error
     */
-   const bool run(void);
+   bool run(void);
 
  private:
    /** \brief Reads general config from ros param server */
@@ -192,7 +193,7 @@ class App
    void readMotorShieldConfig(void);
 
    /** \brief Initializes the motorshields */
-   const bool initMotorShields(void);
+   bool initMotorShields(void);
 
    ros::NodeHandle& _nh; //!< Node handle
 
@@ -225,7 +226,7 @@ App::~App(void)
    _com_server->release();
 }
 
-const bool App::init(void)
+bool App::init(void)
 {
    readGeneralConfig();
 
@@ -242,7 +243,7 @@ const bool App::init(void)
    return true;
 }
 
-const bool App::run(void)
+bool App::run(void)
 {
    ros::Rate loop_rate(50.0);
 
@@ -304,6 +305,7 @@ void App::readMotorShieldConfig(void)
       _nh.getParam(drive_name + "Type", motor._type);
       _nh.getParam(drive_name + "ControlMode", motor._control_mode);
       _nh.getParam(drive_name + "PWMMax", motor._pwm_max);
+      _nh.getParam(drive_name + "SpeedMax", motor._speed_max_rpm);
       _nh.getParam(drive_name + "GearRatio", motor._gear_ratio);
       _nh.getParam(drive_name + "EncoderResolution", motor._encoder_resolution);
       _nh.getParam(drive_name + "MMPerRev", motor._mm_per_rev);
@@ -321,7 +323,7 @@ void App::readMotorShieldConfig(void)
    }
 }
 
-const bool App::initMotorShields(void)
+bool App::initMotorShields(void)
 {
    unsigned int drive_idx = 0u;
 
@@ -345,6 +347,8 @@ const bool App::initMotorShields(void)
          if(!drive->setType(static_cast<MotorType>(motor._type)))
             return false;
          if(!drive->setPWMLimit(motor._pwm_max))
+            return false;
+         if(!drive->setMaxSpeedRPM(motor._speed_max_rpm))
             return false;
          if(!drive->setControlMode(
                 static_cast<MotorControlMode>(motor._control_mode)))

@@ -3,6 +3,7 @@
     <param name="Type"                  value="2"      />
     <param name="ControlMode"           value="2"      />
     <param name="PWMMax"                value="100.0"    />
+    <param name="SpeedMax"              value="100.0" />
     <param name="GearRatio"             value="22.4"   />
     <param name="EncoderResolution"     value="1024"   />
     <param name="MMPerRev"              value="1.0"    />
@@ -20,6 +21,7 @@
     <param name="Type"                  value="2"      />
     <param name="ControlMode"           value="2"      />
     <param name="PWMMax"                value="100.0"    />
+    <param name="SpeedMax"              value="100.0" />
     <param name="GearRatio"             value="22.4"   />
     <param name="EncoderResolution"     value="1024"   />
     <param name="MMPerRev"              value="1.0"    />
@@ -36,6 +38,7 @@
   <group ns="Motor3">
     <param name="Type"                  value="2"      />
     <param name="ControlMode"           value="2"      />
+    <param name="SpeedMax"              value="100.0" />
     <param name="PWMMax"                value="100.0"    />
     <param name="GearRatio"             value="22.4"   />
     <param name="EncoderResolution"     value="1024"   />
@@ -53,6 +56,7 @@
   <group ns="Motor4">
     <param name="Type"                  value="2"    />
     <param name="ControlMode"           value="2"    />
+    <param name="SpeedMax"              value="100.0" />
     <param name="PWMMax"                value="100.0" />
     <param name="GearRatio"             value="22.4" />
     <param name="EncoderResolution"     value="1024" />
@@ -68,9 +72,9 @@
   </group>
 
   <node name="MotorShieldTestNode" pkg="evo_motor_shield_interface" type="evo_motor_shield_interface_test_node" output="screen" >
-    <param name="CAN"             value="can_motor" />
+    <param name="CAN"             value="slcan0" />
     <param name="FirstID"         value="1"      />
-    <param name="NumControllers"  value="2"      />
+    <param name="NumControllers"  value="1"      />
     <param name="TimeoutMS"       value="300"     />
   </node>
     

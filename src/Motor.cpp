@@ -31,7 +31,7 @@ Motor::~Motor(void)
    release();
 }
 
-const bool Motor::setType(const MotorType type)
+bool Motor::setType(const MotorType type)
 {
    if(!_is_initialized)
    {
@@ -56,7 +56,7 @@ const bool Motor::setType(const MotorType type)
    return true;
 }
 
-const bool Motor::setPWMLimit(const float pwm_max_value)
+bool Motor::setPWMLimit(const float pwm_max_value)
 {
    if(!_is_initialized)
    {
@@ -75,7 +75,35 @@ const bool Motor::setPWMLimit(const float pwm_max_value)
    return true;
 }
 
-const bool Motor::setControlMode(const MotorControlMode mode)
+bool Motor::setMaxSpeedRPM(const float speed_max_rpm)
+{
+   if(!_is_initialized)
+   {
+      LOG_ERROR("Class is not initialized!");
+      return false;
+   }
+
+   // Only positive values are allowed (absolute speed limit)
+   if(speed_max_rpm < 0.0)
+   {
+      LOG_ERROR("Maximum speed is an absolute value. " 
+                "Limit must be greater or equal 0.0 rpm!");
+      return false;
+   }
+
+   // CRC lock not necessarry -> only local parameter
+
+   // Set speed limit
+   _speed_max_rpm = speed_max_rpm;
+
+   // Check if current speed value has to be limited
+   if(fabs(static_cast<float>(_tgt_speed)) > _speed_max_rpm)
+      return setTargetSpeed(_speed_max_rpm);
+
+   return true;
+}
+
+bool Motor::setControlMode(const MotorControlMode mode)
 {
    if(!_is_initialized)
    {
@@ -101,7 +129,7 @@ const bool Motor::setControlMode(const MotorControlMode mode)
    return true;
 }
 
-const bool Motor::setGearRatio(const float gear_ratio)
+bool Motor::setGearRatio(const float gear_ratio)
 {
    if(!_is_initialized)
    {
@@ -126,7 +154,7 @@ const bool Motor::setGearRatio(const float gear_ratio)
    return true;
 }
 
-const bool Motor::setEncoderResolution(const uint16_t encoder_reso)
+bool Motor::setEncoderResolution(const uint16_t encoder_reso)
 {
    if(!_is_initialized)
    {
@@ -145,7 +173,7 @@ const bool Motor::setEncoderResolution(const uint16_t encoder_reso)
    return true;
 }
 
-const bool Motor::setConvFacAdcMMPerTick(const float conv_fac_adc_mm_per_tick)
+bool Motor::setConvFacAdcMMPerTick(const float conv_fac_adc_mm_per_tick)
 {
    if(!_is_initialized)
    {
@@ -165,7 +193,7 @@ const bool Motor::setConvFacAdcMMPerTick(const float conv_fac_adc_mm_per_tick)
    return true;
 }
 
-const bool Motor::setOffsAdcMM(const float offs_adc_mm)
+bool Motor::setOffsAdcMM(const float offs_adc_mm)
 {
    if(!_is_initialized)
    {
@@ -181,7 +209,7 @@ const bool Motor::setOffsAdcMM(const float offs_adc_mm)
    return true;
 }
 
-const bool Motor::setPositionKp(const float kp)
+bool Motor::setPositionKp(const float kp)
 {
    if(!_is_initialized)
    {
@@ -197,7 +225,7 @@ const bool Motor::setPositionKp(const float kp)
    return true;
 }
 
-const bool Motor::setPositionKi(const float ki)
+bool Motor::setPositionKi(const float ki)
 {
    if(!_is_initialized)
    {
@@ -213,7 +241,7 @@ const bool Motor::setPositionKi(const float ki)
    return true;
 }
 
-const bool Motor::setPositionKd(const float kd)
+bool Motor::setPositionKd(const float kd)
 {
    if(!_is_initialized)
    {
@@ -229,7 +257,7 @@ const bool Motor::setPositionKd(const float kd)
    return true;
 }
 
-const bool Motor::setSpeedKp(const float kp)
+bool Motor::setSpeedKp(const float kp)
 {
    if(!_is_initialized)
    {
@@ -245,7 +273,7 @@ const bool Motor::setSpeedKp(const float kp)
    return true;
 }
 
-const bool Motor::setSpeedKi(const float ki)
+bool Motor::setSpeedKi(const float ki)
 {
    if(!_is_initialized)
    {
@@ -261,7 +289,7 @@ const bool Motor::setSpeedKi(const float ki)
    return true;
 }
 
-const bool Motor::setSpeedKd(const float kd)
+bool Motor::setSpeedKd(const float kd)
 {
    if(!_is_initialized)
    {
@@ -277,7 +305,7 @@ const bool Motor::setSpeedKd(const float kd)
    return true;
 }
 
-const bool Motor::resetRevs(const float init_revs)
+bool Motor::resetRevs(const float init_revs)
 {
    if(!_is_initialized)
    {
@@ -298,7 +326,7 @@ const bool Motor::resetRevs(const float init_revs)
    return true;
 }
 
-const bool Motor::setOperationStatus(const MotorStatus state)
+bool Motor::setOperationStatus(const MotorStatus state)
 {
    if(!_is_initialized)
    {
@@ -330,7 +358,7 @@ const bool Motor::setOperationStatus(const MotorStatus state)
    return true;
 }
 
-const bool Motor::setTargetPWM(const float value)
+bool Motor::setTargetPWM(const float value)
 {
    if(!_is_initialized)
    {
@@ -362,8 +390,11 @@ const bool Motor::setTargetPWM(const float value)
 
    return true;
 }
-
-const bool Motor::setTargetSpeed(const float value)
+   /* REV
+   *  MMA ERROR: setTargetSpeedRPM would be precise. rad/s could be an alternative..
+   *  
+   */
+bool Motor::setTargetSpeed(const float value)
 {
    if(!_is_initialized)
    {
@@ -373,7 +404,7 @@ const bool Motor::setTargetSpeed(const float value)
 
    if(MOTOR_SHIELD_STS_OK != _motor_shield.getState())
    {
-
+      
       _tgt_speed = 0.0f;
 
       return false;
@@ -383,6 +414,20 @@ const bool Motor::setTargetSpeed(const float value)
    {
       LOG_WARN("Cannot set speed -> Drive is disabled!");
       return false;
+   }
+
+   // Limit speed -> only for type drive
+   if(static_cast<MotorType>((uint8_t)_type) == MOTOR_TYPE_DRIVE)
+   {
+      if(fabsf(value) > _speed_max_rpm)
+      {
+         // Generate warning -> no error
+         // Old speed is maintained
+
+         LOG_WARN("Requested speed " << value << " rpm is higher than speed limit "
+                   << _speed_max_rpm << " rpm");
+         return false;
+      }
    }
 
    if(_tgt_speed.getDataUpdated())
@@ -396,7 +441,7 @@ const bool Motor::setTargetSpeed(const float value)
    return true;
 }
 
-const bool Motor::setTargetPosition(const float value)
+bool Motor::setTargetPosition(const float value)
 {
    if(!_is_initialized)
    {
@@ -428,34 +473,39 @@ const bool Motor::setTargetPosition(const float value)
    return true;
 }
 
-const MotorStatus Motor::getOperationStatus(void)
+MotorStatus Motor::getOperationStatus(void)
 {
    return static_cast<MotorStatus>((uint8_t) _status);
 }
 
-const MotorType Motor::getType(void)
+MotorType Motor::getType(void)
 {
    return static_cast<MotorType>((uint8_t) _type);
 }
 
-const float Motor::getCurrentAmp(void)
+float Motor::getCurrentAmp(void)
 {
    return static_cast<float>(_current);
 }
 
-const float Motor::getPositionMM(void)
+float Motor::getPositionMM(void)
 {
    return static_cast<float>(_position);
 }
 
-const float Motor::getRevolutions(void)
+float Motor::getRevolutions(void)
 {
    return static_cast<float>(_revolutions);
 }
 
-const float Motor::getSpeedRPM(void)
+float Motor::getSpeedRPM(void)
 {
    return static_cast<float>(_speed);
+}
+
+float Motor::getMaxSpeedRPM(void) const
+{
+   return _speed_max_rpm;
 }
 
 /* !Public Class Functions -------------------------------------------------------*/
@@ -490,6 +540,7 @@ Motor::Motor(const unsigned int id, MotorShield& shield, const bool logging) :
     _speed_ki(MSO_M_PARAM_BASE_IDX + (id * 1000u) + MO_SPD_KI, true, float(0)),
     _speed_kd(MSO_M_PARAM_BASE_IDX + (id * 1000u) + MO_SPD_KD, true, float(0)),
     _reset_revs(MSO_M_PARAM_BASE_IDX + (id * 1000u) + MO_RESET_REVS, true, float(0)),
+    _speed_max_rpm(std::numeric_limits<float>::max()),
 
     _current(MSO_M_PARAM_BASE_IDX + (id * 1000u) + MO_CURRENT, false, float(0)),
     _position(MSO_M_PARAM_BASE_IDX + (id * 1000u) + MO_POS, false, float(0)),
@@ -504,7 +555,7 @@ Motor::Motor(const unsigned int id, MotorShield& shield, const bool logging) :
    }
 }
 
-const bool Motor::init(void)
+bool Motor::init(void)
 {
    if(!_motor_shield.readConstObject(_type))
       return false;
