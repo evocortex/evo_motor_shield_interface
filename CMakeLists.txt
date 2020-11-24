@@ -8,6 +8,13 @@ find_package(catkin REQUIRED roscpp)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
+set(CMAKE_THREAD_PREFERE_PTHREAD)
+set(THREADS_PREFERE_PTHREAD_FLAG)
+find_package(Threads REQUIRED)
+
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+find_package(evo-mbed-tools REQUIRED)
+
 add_compile_options(-std=c++14 -DROS)
 
 
@@ -61,8 +68,8 @@ add_executable(${PROJECT_NAME}_test_node
 target_link_libraries(${PROJECT_NAME}_test_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
-  evo-mbed-tools
-  pthread
+  evo-mbed-tools::evo-mbed-tools
+  Threads::Threads
 )
 
 
