@@ -105,7 +105,7 @@ bool MotorShield::init(void)
 
    // Check communication version -> Check if com version fits
    // the supported stack
-   if(MOTOR_SHIELD_COM_VER != (float) (_do_com_version))
+   if(MOTOR_SHIELD_COM_VER != floor((float) (_do_com_version)))
    {
       LOG_ERROR("Motorshield reports communication version '"
                 << (float) (_do_com_version) << "' but only version '"
