@@ -33,7 +33,7 @@ MotorShield::MotorShield(const uint8_t node_id,
                          std::shared_ptr<ComServer> com_server,
                          const double update_rate_hz, const bool logging) :
     _com_server(com_server),
-    _com_node_id(node_id), _update_rate_hz(update_rate_hz), _logging(logging)
+    _com_node_id(node_id), _update_rate_hz(update_rate_hz), _logging(false)
 {
    if(_logging)
    {
@@ -87,7 +87,7 @@ bool MotorShield::init(void)
    _motor_shield_state = MOTOR_SHIELD_STS_ERR;
 
    if(!readConstObject(_device_type))
-      return false;
+      return false;   
 
    // Check type
    if(1u != (uint8_t) _device_type)
@@ -103,13 +103,11 @@ bool MotorShield::init(void)
    if(!readConstObject(_do_com_version))
       return false;
 
-   // Check communication version -> Check if com version fits
-   // the supported stack
-   if(MOTOR_SHIELD_COM_VER != floor((float) (_do_com_version)))
-   {
-      LOG_ERROR("Motorshield reports communication version '"
-                << (float) (_do_com_version) << "' but only version '"
-                << MOTOR_SHIELD_COM_VER << "' is supported!");
+   if(!isCOMVersionCompatible()) {
+      LOG_ERROR("Motorshield firmware com version is not compatible with"
+      << " node version! (Motorshield: " << std::setprecision(2) 
+      << (float(_do_com_version)) << " Node: " << MOTOR_SHIELD_COM_VER);
+
       return false;
    }
 
@@ -325,6 +323,10 @@ bool MotorShield::isInitialized(void) const
 /* !Public Class Functions -------------------------------------------------------*/
 
 /* Private Class Functions -------------------------------------------------------*/
+
+bool MotorShield::isCOMVersionCompatible() {
+   return std::floor(static_cast<float>(_do_com_version)) == std::floor(MOTOR_SHIELD_COM_VER);
+}
 
 void MotorShield::updateHandler(void)
 {

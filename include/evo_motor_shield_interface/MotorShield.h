@@ -210,6 +210,12 @@ class MotorShield
    bool isInitialized(void) const;
 
  private:
+
+   /**
+    * @brief Check if com version reported by firmware is compatible
+    */
+   bool isCOMVersionCompatible();
+
    /**
     * @brief Updates the motor shield
     */
