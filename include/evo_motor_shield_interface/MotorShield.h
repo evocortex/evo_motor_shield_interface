@@ -42,10 +42,16 @@ namespace evo_mbed {
 class Motor;
 
 /** \brief Supported communication version */
-constexpr float MOTOR_SHIELD_COM_VER = 1.0f;
+constexpr float MOTOR_SHIELD_COM_VER = 1.0F;
 
 /** \brief Number of drives on one shield */
-constexpr unsigned int MOTOR_SHIELD_DRIVES = 2u;
+constexpr unsigned int MOTOR_SHIELD_DRIVES = 2U;
+
+/** \brief Retry limit of reading/writing */
+constexpr unsigned int MOTOR_SHIELD_COM_RETRY_LIMIT = 3U;
+
+/** \brief Minimum update rate allowed */
+constexpr float MOTOR_SHIELD_MIN_UPDATE_RATE_HZ = 0.1F;
 
 /**
  * @brief States of the motor shield
@@ -136,7 +142,7 @@ class MotorShield
    /**
     * @brief Destructor of motorshield object
     */
-   ~MotorShield(void);
+   ~MotorShield();
 
    /**
     * @brief Initializes the motor shield
@@ -146,13 +152,13 @@ class MotorShield
     * @return true Success
     * @return false Error
     */
-   bool init(void);
+   bool init();
 
    /**
     * @brief Releases the object stops threads and releases
     *        memory
     */
-   void release(void);
+   void release();
 
    /**
     * @brief Synchronises the shield again with the host pc, by
@@ -163,7 +169,7 @@ class MotorShield
     * @return true
     * @return false
     */
-   bool resyncShield(void);
+   bool resyncShield();
 
    /**
     * @brief Sends request to perform a complete reset of the motorcontroller
@@ -171,7 +177,7 @@ class MotorShield
     * @return true
     * @return false
     */
-   bool resetShield(void);
+   bool resetShield();
 
    /**
     * @brief Set maximum communication timeout
@@ -203,23 +209,29 @@ class MotorShield
    std::shared_ptr<Motor> getMotor(const unsigned int id);
 
    /* Getters */
-   float getComID(void) const;
-   MotorShieldState getState(void) const;
+   unsigned int getComID() const;
+   MotorShieldState getState() const;
 
    /** \brief Check if class is initialized */
-   bool isInitialized(void) const;
+   bool isInitialized() const;
 
  private:
 
-   /**
-    * @brief Check if com version reported by firmware is compatible
-    */
+   bool checkInitConditions();
+   bool checkDeviceType();
+   bool checkFirmwareCompability();
+   bool readAdditionalData();
+   bool initMotors();
+   bool runInitialSync();
+   bool createComThread();
    bool isCOMVersionCompatible();
+   void printComError(const ComDataObject& object, const std::string& name, 
+                      const ComMsgErrorCodes& error_code);
 
    /**
     * @brief Updates the motor shield
     */
-   void updateHandler(void);
+   void updateHandler();
 
    /**
     * @brief Reads a constant data object
@@ -245,12 +257,12 @@ class MotorShield
    /**
     * @brief Checks if shield and host is synchronized
     */
-   void checkSyncStatus(void);
+   void checkSyncStatus();
 
    /**
     * @brief Checks the current shield status
     */
-   void checkShieldStatus(void);
+   void checkShieldStatus();
 
    /**
     * @brief Calculates the CRC32 value of the
@@ -258,7 +270,7 @@ class MotorShield
     *
     * @return uint32_t CRC32 value of config
     */
-   uint32_t calcConfigCRC(void);
+   uint32_t calcConfigCRC();
 
    /** \brief Used communication server */
    std::shared_ptr<ComServer> _com_server;
