@@ -223,7 +223,7 @@ class MotorShield
    bool readAdditionalData();
    bool initMotors();
    bool runInitialSync();
-   bool createComThread();
+   bool createUpdateThread();
    bool isCOMVersionCompatible();
    void printComError(const ComDataObject& object, const std::string& name, 
                       const ComMsgErrorCodes& error_code);

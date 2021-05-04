@@ -86,7 +86,7 @@ bool MotorShield::init()
 
    _motor_shield_state = MOTOR_SHIELD_STS_OK;
 
-   if(!createComThread())
+   if(!createUpdateThread())
    {
       return false;
    }
@@ -426,7 +426,7 @@ bool MotorShield::runInitialSync()
    return true;
 }
 
-bool MotorShield::createComThread()
+bool MotorShield::createUpdateThread()
 {
    constexpr unsigned int maximum_wait_time = 10;
 
@@ -436,7 +436,7 @@ bool MotorShield::createComThread()
 
    if(!_run_update)
    {
-      LOG_ERROR("Failed to start communication thread!");
+      LOG_ERROR("Failed to start update thread!");
       return false;
    }
 
