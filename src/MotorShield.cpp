@@ -39,15 +39,15 @@ MotorShield::MotorShield(const uint8_t node_id,
                          std::shared_ptr<ComServer> com_server,
                          const double update_rate_hz, const bool logging) :
     _com_server(com_server),
-    _com_node_id(node_id), _update_rate_hz(update_rate_hz), _logging(logging)
+    _com_node_id(node_id), _update_rate_hz(update_rate_hz), _logging(true)
 {
    if(_logging)
    {
       _log_module += "[" + std::to_string(node_id) + "]";
    }
 
-   _run_update         = false;
-   _is_shield_synced   = false;
+   _run_update_thread  = false;
+   _shield_synced      = false;
    _motor_shield_state = MOTOR_SHIELD_STS_ERR;
 }
 
@@ -111,11 +111,7 @@ void MotorShield::release()
       return;
    }
 
-   if(_run_update)
-   {
-      _run_update = false;
-      _update_thread->join();
-   }
+   stopUpdateThread();
 
    for(auto& motor : _motor_list)
    {
@@ -125,14 +121,14 @@ void MotorShield::release()
       }
    }
 
-   _is_shield_synced   = false;
+   _shield_synced   = false;
    _motor_shield_state = MOTOR_SHIELD_STS_ERR;
-   _is_initialized     = false;
+   _is_initialized  = false;
 }
 
 bool MotorShield::resyncShield()
 {
-   if(_is_shield_synced)
+   if(isShieldSynced())
    {
       return true;
    }
@@ -273,6 +269,11 @@ MotorShieldState MotorShield::getState() const
    return _motor_shield_state;
 }
 
+bool MotorShield::isShieldSynced() const
+{
+   return _shield_synced;
+}
+
 bool MotorShield::isInitialized() const
 {
    return _is_initialized;
@@ -410,7 +411,7 @@ bool MotorShield::runInitialSync()
 {
    checkSyncStatus();
 
-   if(!_is_shield_synced)
+   if(!isShieldSynced())
    {
       _is_initialized   = true;
       const bool result = resyncShield();
@@ -434,13 +435,22 @@ bool MotorShield::createUpdateThread()
 
    std::this_thread::sleep_for(std::chrono::milliseconds(maximum_wait_time));
 
-   if(!_run_update)
+   if(!_run_update_thread)
    {
       LOG_ERROR("Failed to start update thread!");
       return false;
    }
 
    return true;
+}
+
+void MotorShield::stopUpdateThread()
+{
+   if(_run_update_thread)
+   {
+      _run_update_thread = false;
+      _update_thread->join();
+   }
 }
 
 bool MotorShield::isCOMVersionCompatible()
@@ -498,12 +508,12 @@ void MotorShield::printComError(const ComDataObject& object, const std::string& 
 
 void MotorShield::updateHandler()
 {
-   _run_update = true;
+   _run_update_thread = true;
 
    const std::chrono::duration<double, std::micro> loop_time_usec(1e6 /
                                                                   _update_rate_hz);
 
-   while(_run_update)
+   while(_run_update_thread)
    {
       const auto timestamp_start = std::chrono::high_resolution_clock::now();
 
@@ -511,7 +521,7 @@ void MotorShield::updateHandler()
 
       checkShieldStatus();
 
-      if(true == _is_shield_synced)
+      if(true == isShieldSynced())
       {
          for(auto& motor : _motor_list)
          {
@@ -620,7 +630,7 @@ void MotorShield::checkSyncStatus()
    if(!readConstObject(_do_cfg_crc))
    {
       LOG_WARN("Failed to read CRC from drive!");
-      _is_shield_synced = false;
+      _shield_synced = false;
       return;
    }
 
@@ -630,11 +640,11 @@ void MotorShield::checkSyncStatus()
    if(shield_crc != host_crc)
    {
       LOG_WARN("Configuration between host and motorshield out of sync!");
-      _is_shield_synced = false;
+      _shield_synced = false;
    }
    else
    {
-      _is_shield_synced = true;
+      _shield_synced = true;
    }
 }
 
@@ -654,7 +664,7 @@ void MotorShield::checkShieldStatus()
    }
    else
    {
-      if(!_is_shield_synced)
+      if(!isShieldSynced())
       {
          _motor_shield_state = MOTOR_SHIELD_SYNC_ERR;
       }
@@ -675,7 +685,7 @@ void MotorShield::checkShieldStatus()
    }
 }
 
-uint32_t MotorShield::calcConfigCRC()
+uint32_t MotorShield::calcConfigCRC() const
 {
    uint32_t data[MSO_OBJ_SIZE] = {0};
    uint16_t idx                = 0;
