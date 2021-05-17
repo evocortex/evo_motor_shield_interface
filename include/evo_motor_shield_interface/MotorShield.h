@@ -48,7 +48,7 @@ constexpr float MOTOR_SHIELD_COM_VER = 1.0F;
 constexpr unsigned int MOTOR_SHIELD_DRIVES = 2U;
 
 /** \brief Retry limit of reading/writing */
-constexpr unsigned int MOTOR_SHIELD_COM_RETRY_LIMIT = 3U;
+constexpr unsigned int MOTOR_SHIELD_COM_RETRY_LIMIT = 1U;
 
 /** \brief Minimum update rate allowed */
 constexpr float MOTOR_SHIELD_MIN_UPDATE_RATE_HZ = 0.1F;

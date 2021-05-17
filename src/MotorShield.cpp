@@ -574,7 +574,6 @@ bool MotorShield::writeDataObject(ComDataObject& object, const std::string name)
 {
    std::lock_guard<std::mutex> guard(_com_mutex);
 
-
    ComMsgErrorCodes error_code = {COM_MSG_ERR_NONE};
    const Result result =
        _com_server->writeDataObject(_com_node_id, object, error_code, 0, MOTOR_SHIELD_COM_RETRY_LIMIT);
