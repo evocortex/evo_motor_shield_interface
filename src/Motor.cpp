@@ -201,6 +201,9 @@ bool Motor::setOffsAdcMM(const float offs_adc_mm)
       return false;
    }
 
+   // Lock CRC calculation
+   std::lock_guard<std::mutex> guard(_motor_shield._config_mutex);
+
    _offs_adc_mm = offs_adc_mm;
 
    if(!_motor_shield.writeDataObject(_offs_adc_mm, "Offset mm for lift drive"))
@@ -216,6 +219,9 @@ bool Motor::setPositionKp(const float kp)
       LOG_ERROR("Class is not initialized!");
       return false;
    }
+
+   // Lock CRC calculation
+   std::lock_guard<std::mutex> guard(_motor_shield._config_mutex);
 
    _position_kp = kp;
 
@@ -233,6 +239,9 @@ bool Motor::setPositionKi(const float ki)
       return false;
    }
 
+   // Lock CRC calculation
+   std::lock_guard<std::mutex> guard(_motor_shield._config_mutex);
+
    _position_ki = ki;
 
    if(!_motor_shield.writeDataObject(_position_ki, "Position Ki"))
@@ -248,6 +257,9 @@ bool Motor::setPositionKd(const float kd)
       LOG_ERROR("Class is not initialized!");
       return false;
    }
+
+   // Lock CRC calculation
+   std::lock_guard<std::mutex> guard(_motor_shield._config_mutex);
 
    _position_kd = kd;
 
@@ -265,6 +277,9 @@ bool Motor::setSpeedKp(const float kp)
       return false;
    }
 
+   // Lock CRC calculation
+   std::lock_guard<std::mutex> guard(_motor_shield._config_mutex);
+
    _speed_kp = kp;
 
    if(!_motor_shield.writeDataObject(_speed_kp, "Speed Kp"))
@@ -281,6 +296,9 @@ bool Motor::setSpeedKi(const float ki)
       return false;
    }
 
+   // Lock CRC calculation
+   std::lock_guard<std::mutex> guard(_motor_shield._config_mutex);
+
    _speed_ki = ki;
 
    if(!_motor_shield.writeDataObject(_speed_ki, "Speed Ki"))
@@ -296,6 +314,9 @@ bool Motor::setSpeedKd(const float kd)
       LOG_ERROR("Class is not initialized!");
       return false;
    }
+
+   // Lock CRC calculation
+   std::lock_guard<std::mutex> guard(_motor_shield._config_mutex);
 
    _speed_kd = kd;
 

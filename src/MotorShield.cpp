@@ -20,12 +20,19 @@
 #include <evo_motor_shield_interface/MotorShield.h>
 #include <evo_motor_shield_interface/Motor.h>
 #include <evo_mbed/tools/Logging.h>
+#include <evo_mbed/com/ComDefs.h>
 
 #include <iomanip>
 #include <boost/crc.hpp>
+#include <math.h> 
 /*--------------------------------------------------------------------------------*/
 
 using namespace evo_mbed;
+
+/* Makros ------------------------------------------------------------------------*/
+
+#define CHECK_IS_INITIALIZED(x) \
+            if(!_is_initialized) {LOG_ERROR("Class not initialized!"); return (x);}
 
 /* Public Class Functions --------------------------------------------------------*/
 
@@ -33,24 +40,251 @@ MotorShield::MotorShield(const uint8_t node_id,
                          std::shared_ptr<ComServer> com_server,
                          const double update_rate_hz, const bool logging) :
     _com_server(com_server),
-    _com_node_id(node_id), _update_rate_hz(update_rate_hz), _logging(false)
+    _com_node_id(node_id), _update_rate_hz(update_rate_hz), _logging(logging)
 {
    if(_logging)
    {
       _log_module += "[" + std::to_string(node_id) + "]";
    }
 
-   _run_update         = false;
-   _is_shield_synced   = false;
-   _motor_shield_state = MOTOR_SHIELD_STS_OK;
+   _run_update_thread  = false;
+   _shield_synced      = false;
+   _motor_shield_state = MOTOR_SHIELD_STS_ERR;
 }
 
-MotorShield::~MotorShield(void)
+MotorShield::~MotorShield()
 {
    release();
 }
 
-bool MotorShield::init(void)
+bool MotorShield::init()
+{
+   if(!checkInitConditions())
+   {
+      return false;
+   }
+
+   if(!checkDeviceType())
+   {
+      return false;
+   }
+   if(!checkFirmwareCompability())
+   {
+      return false;
+   }
+   if(!readAdditionalData())
+   {
+      return false;
+   }
+   if(!initMotors())
+   {
+      return false;
+   }
+   if(!runInitialSync())
+   {
+      return false;
+   }
+
+   _motor_shield_state = MOTOR_SHIELD_STS_OK;
+
+   if(!createUpdateThread())
+   {
+      return false;
+   }
+
+   LOG_INFO(" Initialized Motor Shield: "
+            << " FW-Ver: " << (float) (_do_fw_version)
+            << " FW-Build: " << std::setprecision(8) << (float) (_do_fw_build_date)
+            << " COM-Ver: " << std::setprecision(5) << (float) (_do_com_version));
+
+   _timeout_error_cnt      = 0;
+   _timeout_error_cnt_prev = 0;
+
+   _is_initialized = true;
+
+   return true;
+}
+
+void MotorShield::release()
+{
+   if(!_is_initialized)
+   {
+      return;
+   }
+
+   stopUpdateThread();
+
+   for(auto& motor : _motor_list)
+   {
+      if(motor)
+      {
+         motor->release();
+      }
+   }
+
+   _shield_synced   = false;
+   _motor_shield_state = MOTOR_SHIELD_STS_ERR;
+   _is_initialized  = false;
+}
+
+bool MotorShield::resyncShield()
+{
+   if(isShieldSynced())
+   {
+      return true;
+   }
+
+   if(!setComTimeout(_do_com_timeout))
+   {
+      return false;
+   }
+
+   for(auto& motor : _motor_list)
+   {
+      motor->_tgt_pwm = 0.0F;
+      motor->_tgt_pwm.setDataUpdated();
+
+      motor->_tgt_speed = 0.0F;
+      motor->_tgt_speed.setDataUpdated();
+
+      if(!motor->setType(static_cast<MotorType>((uint8_t) motor->_type)))
+      {
+         return false;
+      }
+
+      if(!motor->setPWMLimit(motor->_pwm_max_value))
+      {
+         return false;
+      }
+
+      if(!motor->setControlMode(
+             static_cast<MotorControlMode>((uint8_t) motor->_ctrl_mode)))
+      {
+         return false;
+      }
+
+      if(!motor->setGearRatio(motor->_gear_ratio))
+      {
+         return false;
+      }
+
+      if(!motor->setEncoderResolution(motor->_encoder_resolution))
+      {
+         return false;
+      }
+
+      if(!motor->setConvFacAdcMMPerTick(motor->_conv_fac_adc_mm_per_tick))
+      {
+         return false;
+      }
+
+      if(!motor->setOffsAdcMM(motor->_offs_adc_mm))
+      {
+         return false;
+      }
+
+      if(!motor->setPositionKp(motor->_position_kp))
+      {
+         return false;
+      }
+
+      if(!motor->setPositionKi(motor->_position_ki))
+      {
+         return false;
+      }
+
+      if(!motor->setPositionKd(motor->_position_kd))
+      {
+         return false;
+      }
+
+      if(!motor->setSpeedKp(motor->_speed_kp))
+      {
+         return false;
+      }
+
+      if(!motor->setSpeedKi(motor->_speed_ki))
+      {
+         return false;
+      }
+
+      if(!motor->setSpeedKd(motor->_speed_kd))
+      {
+         return false;
+      }
+
+      if(MOTOR_TYPE_DRIVE == motor->getType())
+      {
+         motor->_reset_revs =  static_cast<float>(motor->_revolutions);
+
+         if(!writeDataObject(motor->_reset_revs, "Reset Revolutions Resync!"))
+         {
+            return false;
+         }
+      }
+   }
+
+   return true;
+}
+
+bool MotorShield::setComTimeout(const uint32_t com_timeout_ms)
+{
+   CHECK_IS_INITIALIZED(false);
+
+   std::lock_guard<std::mutex> guard(_config_mutex);
+
+   _do_com_timeout = com_timeout_ms;
+
+   return writeDataObject(_do_com_timeout, "ComTimeout");
+}
+
+std::shared_ptr<Motor> MotorShield::getMotor(const unsigned int id)
+{
+   CHECK_IS_INITIALIZED(nullptr);
+
+   std::shared_ptr<Motor> motor = nullptr;
+
+   if(0 == id)
+   {
+      motor = _motor_list[0];
+   }
+   else if(1 == id)
+   {
+      motor = _motor_list[1];
+   }
+   else
+   {
+      LOG_ERROR("Requested motor id is invalid [0;1]");
+   }
+   
+   return motor;
+}
+
+unsigned int MotorShield::getComID() const
+{
+   return _com_node_id;
+}
+
+MotorShieldState MotorShield::getState() const
+{
+   return _motor_shield_state;
+}
+
+bool MotorShield::isShieldSynced() const
+{
+   return _shield_synced;
+}
+
+bool MotorShield::isInitialized() const
+{
+   return _is_initialized;
+}
+
+/* !Public Class Functions -------------------------------------------------------*/
+
+/* Private Class Functions -------------------------------------------------------*/
+
+bool MotorShield::checkInitConditions()
 {
    if(_is_initialized)
    {
@@ -64,15 +298,16 @@ bool MotorShield::init(void)
       return false;
    }
 
-   if(_com_node_id < 1 && _com_node_id > 127)
+   if(_com_node_id < COM_NODE_ID_MIN && _com_node_id > COM_NODE_ID_MAX)
    {
       LOG_ERROR("Node ID is not valid! [1;127]");
       return false;
    }
 
-   if(_update_rate_hz <= 0.1)
+   if(_update_rate_hz <= MOTOR_SHIELD_MIN_UPDATE_RATE_HZ)
    {
-      LOG_ERROR("Update rate has to be >= 0.1 (" << _update_rate_hz << ")");
+      LOG_ERROR("Update rate has to be >= " << MOTOR_SHIELD_MIN_UPDATE_RATE_HZ 
+         << " (" << _update_rate_hz << ")");
       return false;
    }
 
@@ -82,15 +317,17 @@ bool MotorShield::init(void)
       return false;
    }
 
-   // Reset variables
-   _is_shield_synced   = false;
-   _motor_shield_state = MOTOR_SHIELD_STS_ERR;
+   return true;
+}
 
+bool MotorShield::checkDeviceType()
+{
    if(!readConstObject(_device_type))
-      return false;   
+   {
+      return false;
+   }
 
-   // Check type
-   if(1u != (uint8_t) _device_type)
+   if(1 != (uint8_t) _device_type)
    {
       LOG_ERROR("Motorshield error: Type of Node is '" << +(uint8_t) _device_type
                                                        << "' which is not a"
@@ -98,35 +335,65 @@ bool MotorShield::init(void)
       return false;
    }
 
-   if(!readConstObject(_do_fw_version))
-      return false;
-   if(!readConstObject(_do_com_version))
-      return false;
+   return true;
+}
 
-   if(!isCOMVersionCompatible()) {
+bool MotorShield::checkFirmwareCompability()
+{
+   if(!readConstObject(_do_fw_version))
+   {
+      return false;
+   }
+   if(!readConstObject(_do_com_version))
+   {
+      return false;
+   }
+
+   if(!isCOMVersionCompatible())
+   {
       LOG_ERROR("Motorshield firmware com version is not compatible with"
-      << " node version! (Motorshield: " << std::setprecision(2) 
-      << (float(_do_com_version)) << " Node: " << MOTOR_SHIELD_COM_VER);
+                << " node version! (Motorshield: " << std::setprecision(2)
+                << (float(_do_com_version)) << " Node: " << MOTOR_SHIELD_COM_VER);
 
       return false;
    }
 
+   return true;
+}
+
+bool MotorShield::readAdditionalData()
+{
    if(!readConstObject(_do_fw_build_date))
+   {
       return false;
+   }
    if(!readConstObject(_do_status))
+   {
       return false;
+   }
    if(!readConstObject(_do_cfg_crc))
+   {
       return false;
-
+   }
    if(!readConstObject(_do_reset_request))
+   {
       return false;
+   }
    if(!readConstObject(_do_com_timeout))
+   {
       return false;
+   }
    if(!readConstObject(_do_pwm_frequency))
+   {
       return false;
+   }
 
-   // Create and intialize sensors
-   unsigned int id = 0u;
+   return true;
+}
+
+bool MotorShield::initMotors()
+{
+   unsigned int id = 0;
    for(auto& motor : _motor_list)
    {
       motor = std::shared_ptr<Motor>(new Motor(id++, *this, _logging));
@@ -138,204 +405,116 @@ bool MotorShield::init(void)
       }
    }
 
-   // Check sync state
+   return true;
+}
+
+bool MotorShield::runInitialSync()
+{
    checkSyncStatus();
 
-   if(!_is_shield_synced)
+   if(!isShieldSynced())
    {
-      LOG_ERROR("Shield is not synchronized with settings in initialization phase!");
-      return false;
+      _is_initialized   = true;
+      const bool result = resyncShield();
+      _is_initialized   = false;
+
+      if(!result)
+      {
+         LOG_ERROR("Failed to synchronise settings with motor shield!");
+         return false;
+      }
    }
 
-   _motor_shield_state = MOTOR_SHIELD_STS_OK;
+   return true;
+}
 
-   // Create update thread
+bool MotorShield::createUpdateThread()
+{
+   constexpr unsigned int maximum_wait_time = 10;
+
    _update_thread = std::make_unique<std::thread>(&MotorShield::updateHandler, this);
-   auto timer_ms  = 0u;
-   while(timer_ms < 10u && !_run_update)
-   {
-      timer_ms++;
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-   }
 
-   if(!_run_update)
+   std::this_thread::sleep_for(std::chrono::milliseconds(maximum_wait_time));
+
+   if(!_run_update_thread)
    {
       LOG_ERROR("Failed to start update thread!");
       return false;
    }
 
-   LOG_INFO(" Initialized Motor Shield: "
-            << " FW-Ver: " << (float) (_do_fw_version)
-            << " FW-Build: " << std::setprecision(8) << (float) (_do_fw_build_date)
-            << " COM-Ver: " << std::setprecision(5) << (float) (_do_com_version));
-
-   _timeout_error_cnt      = 0u;
-   _timeout_error_cnt_prev = 0u;
-
-   _is_initialized = true;
-
    return true;
 }
 
-void MotorShield::release(void)
+void MotorShield::stopUpdateThread()
 {
-   if(!_is_initialized)
-      return;
-
-   if(_run_update)
+   if(_run_update_thread)
    {
-      _run_update = false;
+      _run_update_thread = false;
       _update_thread->join();
    }
+}
 
-   for(auto motor : _motor_list)
+bool MotorShield::isCOMVersionCompatible()
+{
+   return floor(static_cast<float>(_do_com_version)) ==
+          floor(MOTOR_SHIELD_COM_VER);
+}
+
+void MotorShield::printComError(const ComDataObject& object, const std::string& name, 
+                                const ComMsgErrorCodes& error_code)
+{
+   std::string error_str;
+
+   switch(error_code)
    {
-      if(motor)
-      {
-         motor->release();
-      }
+   case COM_MSG_ERR_NONE: {
+      return;
+   }
+   break;
+   case COM_MSG_ERR_INVLD_CMD: {
+      error_str = "Invalid command";
+   }
+   break;
+   case COM_MSG_ERR_READ_ONLY: {
+      error_str = "Read-Only";
+   }
+   break;
+   case COM_MSG_ERR_OBJCT_INVLD: {
+      error_str = "Object unknown";
+   }
+   break;
+   case COM_MSG_ERR_INVLD_DATA_TYPE: {
+      error_str = "Invalid data type";
+   }
+   break;
+   case COM_MSG_ERR_VALUE_RANGE_EXCD: {
+      error_str = "Value out of range";
+   }
+   break;
+   case COM_MSG_ERR_COND_NOT_MET: {
+      error_str = "Conditions not met to write";
+   }
+   break;
    }
 
-   _is_initialized = false;
+   const std::string log_msg = "Failed to write object: ";
+
+   const std::string object_info =
+      " (Object-ID: " + std::to_string(object.getID()) +
+      ", Raw-Value: " + std::to_string(object.getRawValue()) + ", Desc: " + name +
+      ")";
+
+   LOG_ERROR(log_msg << error_str << " " << object_info);
 }
 
-bool MotorShield::resyncShield(void)
+void MotorShield::updateHandler()
 {
-   if(_is_shield_synced)
-      return true;
-
-   if(!setComTimeout(_do_com_timeout))
-      return false;
-
-   for(auto motor : _motor_list)
-   {
-      // Reset target values
-      motor->_tgt_pwm = 0.0f;
-      motor->_tgt_pwm.setDataUpdated();
-
-      motor->_tgt_speed = 0.0f;
-      motor->_tgt_speed.setDataUpdated();
-      
-      if(!motor->setType(static_cast<MotorType>((uint8_t) motor->_type)))
-         return false;
-
-      if(!motor->setPWMLimit(motor->_pwm_max_value))
-         return false;
-
-      if(!motor->setControlMode(
-             static_cast<MotorControlMode>((uint8_t) motor->_ctrl_mode)))
-         return false;
-
-      if(!motor->setGearRatio(motor->_gear_ratio))
-         return false;
-
-      if(!motor->setEncoderResolution(motor->_encoder_resolution))
-         return false;
-
-      if(!motor->setConvFacAdcMMPerTick(motor->_conv_fac_adc_mm_per_tick))
-         return false;
-
-      if(!motor->setOffsAdcMM(motor->_offs_adc_mm))
-         return false;
-
-      if(!motor->setPositionKp(motor->_position_kp))
-         return false;
-
-      if(!motor->setPositionKi(motor->_position_ki))
-         return false;
-
-      if(!motor->setPositionKd(motor->_position_kd))
-         return false;
-
-      if(!motor->setSpeedKp(motor->_speed_kp))
-         return false;
-
-      if(!motor->setSpeedKi(motor->_speed_ki))
-         return false;
-
-      if(!motor->setSpeedKd(motor->_speed_kd))
-         return false;
-
-      if(MOTOR_TYPE_DRIVE == motor->getType())
-      {
-         motor->_reset_revs = (float) motor->_revolutions;
-
-         // Reset revolutions
-         if(!writeDataObject(motor->_reset_revs, "Reset Revolutions Resync!"))
-            return false;
-      }
-   }
-
-   return true;
-}
-
-bool MotorShield::setComTimeout(const uint32_t com_timeout_ms)
-{
-   // Lock CRC calculation
-   std::lock_guard<std::mutex> guard(_config_mutex);
-
-   if(!_is_initialized)
-   {
-      LOG_ERROR("Class is not initialized!");
-      return false;
-   }
-
-   _do_com_timeout = com_timeout_ms;
-
-   if(!writeDataObject(_do_com_timeout, "ComTimeout"))
-      return false;
-
-   return true;
-}
-
-std::shared_ptr<Motor> MotorShield::getMotor(const unsigned int id)
-{
-   if(!_is_initialized)
-   {
-      LOG_ERROR("Class is not initialized!");
-      return std::shared_ptr<Motor>();
-   }
-
-   if(id >= MOTOR_SHIELD_DRIVES)
-   {
-      LOG_ERROR("Requested motor id is invalid [0;1]");
-      return std::shared_ptr<Motor>();
-   }
-
-   return _motor_list[id];
-}
-
-float MotorShield::getComID(void) const
-{
-   return _com_node_id;
-}
-
-MotorShieldState MotorShield::getState(void) const
-{
-   return _motor_shield_state;
-}
-
-bool MotorShield::isInitialized(void) const
-{
-   return _is_initialized;
-}
-
-/* !Public Class Functions -------------------------------------------------------*/
-
-/* Private Class Functions -------------------------------------------------------*/
-
-bool MotorShield::isCOMVersionCompatible() {
-   return std::floor(static_cast<float>(_do_com_version)) == std::floor(MOTOR_SHIELD_COM_VER);
-}
-
-void MotorShield::updateHandler(void)
-{
-   _run_update = true;
+   _run_update_thread = true;
 
    const std::chrono::duration<double, std::micro> loop_time_usec(1e6 /
                                                                   _update_rate_hz);
 
-   while(_run_update)
+   while(_run_update_thread)
    {
       const auto timestamp_start = std::chrono::high_resolution_clock::now();
 
@@ -343,7 +522,7 @@ void MotorShield::updateHandler(void)
 
       checkShieldStatus();
 
-      if(true == _is_shield_synced)
+      if(true == isShieldSynced())
       {
          for(auto& motor : _motor_list)
          {
@@ -363,125 +542,78 @@ bool MotorShield::readConstObject(ComDataObject& object)
 {
    std::lock_guard<std::mutex> guard(_com_mutex);
 
-   ComMsgErrorCodes error_code;
+   ComMsgErrorCodes error_code = {COM_MSG_ERR_NONE};
 
-   const Result com_result =
-       _com_server->readDataObject(_com_node_id, object, error_code, 0u, 4u);
+   const Result result =
+       _com_server->readDataObject(_com_node_id, object, error_code, 
+                                    0U, MOTOR_SHIELD_COM_RETRY_LIMIT);
 
-   switch(com_result)
+   switch(result)
    {
-   case RES_OK:
+   case RES_OK: 
    {
-      if(COM_MSG_ERR_NONE != error_code)
-         return false;
-
-      return true;
+      return (COM_MSG_ERR_NONE == error_code);
    }
-   break;
 
-   case RES_TIMEOUT:
+   case RES_TIMEOUT: 
    {
       _timeout_error_cnt++;
       return false;
    }
-   break;
 
-   default:
+   default: 
    {
-      // General error
       _motor_shield_state = MOTOR_SHIELD_STS_ERR;
       return false;
    }
-   break;
    }
 
    return false;
 }
 
-bool MotorShield::writeDataObject(ComDataObject& object,
-                                        const std::string name)
+bool MotorShield::writeDataObject(ComDataObject& object, const std::string name)
 {
    std::lock_guard<std::mutex> guard(_com_mutex);
 
-   ComMsgErrorCodes error_code = COM_MSG_ERR_NONE;
+   ComMsgErrorCodes error_code = {COM_MSG_ERR_NONE};
+   const Result result =
+       _com_server->writeDataObject(_com_node_id, object, error_code, 0, MOTOR_SHIELD_COM_RETRY_LIMIT);
 
-   const std::string log_info =
-       " (Object-ID: " + std::to_string(object.getID()) +
-       ", Raw-Value: " + std::to_string(object.getRawValue()) + ", Desc: " + name +
-       ")";
-
-   // Write data with timeout threshold = default and 2 retries
-   const Result com_result =
-       _com_server->writeDataObject(_com_node_id, object, error_code, 0, 2u);
-
-   switch(com_result)
+   switch(result)
    {
-   case RES_OK:
-   {
+   case RES_OK: {
+      bool success = (COM_MSG_ERR_NONE == error_code);
 
-      if(COM_MSG_ERR_NONE == error_code)
+      if(success)
       {
          object.setDataReaded();
-         return true;
       }
-
-      if(_logging)
+      else
       {
-         switch(error_code)
+         if(_logging) 
          {
-         case COM_MSG_ERR_INVLD_CMD:
-         {
-            LOG_ERROR("Failed to write object: Invalid command" << log_info);
+            printComError(object, name, error_code);
          }
-         break;
-         case COM_MSG_ERR_READ_ONLY:
+
+         if(RES_OK != _com_server->readDataObject(_com_node_id, object, error_code, 0U, MOTOR_SHIELD_COM_RETRY_LIMIT))
          {
-            LOG_ERROR("Failed to write object: Read-Only" << log_info);
-         }
-         break;
-         case COM_MSG_ERR_OBJCT_INVLD:
-         {
-            LOG_ERROR("Failed to write object: Object unknown" << log_info);
-         }
-         break;
-         case COM_MSG_ERR_INVLD_DATA_TYPE:
-         {
-            LOG_ERROR("Failed to write object: Invalid data type" << log_info);
-         }
-         break;
-         case COM_MSG_ERR_VALUE_RANGE_EXCD:
-         {
-            LOG_ERROR("Failed to write object: Value out of range" << log_info);
-         }
-         break;
-         case COM_MSG_ERR_COND_NOT_MET:
-         {
-            LOG_ERROR("Failed to write object: Conditions not met to write"
-                      << log_info);
-         }
-         break;
+            LOG_ERROR("Failed to read data from device!");
          }
       }
 
-      if(RES_OK !=
-         _com_server->readDataObject(_com_node_id, object, error_code, 0u, 2u))
-         LOG_ERROR("Failed to read data from device" << log_info);
-
-      return false;
+      return success;
    }
    break;
 
-   case RES_TIMEOUT:
+   case RES_TIMEOUT: 
    {
       _timeout_error_cnt++;
-
       return false;
    }
    break;
 
-   default:
+   default: 
    {
-      // General error
       _motor_shield_state = MOTOR_SHIELD_STS_ERR;
       return false;
    }
@@ -491,13 +623,14 @@ bool MotorShield::writeDataObject(ComDataObject& object,
    return false;
 }
 
-void MotorShield::checkSyncStatus(void)
+void MotorShield::checkSyncStatus()
 {
    std::lock_guard<std::mutex> guard(_config_mutex);
 
    if(!readConstObject(_do_cfg_crc))
    {
-      _is_shield_synced = false;
+      LOG_WARN("Failed to read CRC from drive!");
+      _shield_synced = false;
       return;
    }
 
@@ -506,37 +639,32 @@ void MotorShield::checkSyncStatus(void)
 
    if(shield_crc != host_crc)
    {
-      LOG_WARN("Configuration between host and controll out of sync!");
-      _is_shield_synced = false;
+      LOG_WARN("Configuration between host and motorshield out of sync!");
+      _shield_synced = false;
    }
    else
    {
-      _is_shield_synced = true;
+      _shield_synced = true;
    }
 }
 
-void MotorShield::checkShieldStatus(void)
+void MotorShield::checkShieldStatus()
 {
-   // Check if error is present -> only healable by reset
    if(MOTOR_SHIELD_STS_ERR == _motor_shield_state)
    {
       return;
    }
 
-   // Store timeout errors
-   const unsigned int timeout_error_cnt = _timeout_error_cnt;
-   const int timeout_errors = timeout_error_cnt - _timeout_error_cnt_prev;
+   bool new_timeout_error_detected = (_timeout_error_cnt > _timeout_error_cnt_prev);
 
-   // If more than 1 timeout error occured in the last cycle
-   // switch to timeout error
-   if(timeout_errors > 0)
+   if(new_timeout_error_detected)
    {
       _motor_shield_state = MOTOR_SHIELD_TIMEOUT;
-      LOG_INFO("Errors: " << +timeout_errors);
+      LOG_INFO("Timeout-Error! Overall count: " << + _timeout_error_cnt);
    }
    else
    {
-      if(!_is_shield_synced)
+      if(!isShieldSynced())
       {
          _motor_shield_state = MOTOR_SHIELD_SYNC_ERR;
       }
@@ -546,10 +674,18 @@ void MotorShield::checkShieldStatus(void)
       }
    }
 
-   _timeout_error_cnt_prev = timeout_error_cnt;
+   if(_timeout_error_cnt >= std::numeric_limits<unsigned int>::max())
+   {
+      _timeout_error_cnt = 0;
+      _timeout_error_cnt_prev = 0;
+   }
+   else
+   {
+      _timeout_error_cnt_prev = _timeout_error_cnt;
+   }
 }
 
-uint32_t MotorShield::calcConfigCRC(void)
+uint32_t MotorShield::calcConfigCRC() const
 {
    uint32_t data[MSO_OBJ_SIZE] = {0};
    uint16_t idx                = 0;

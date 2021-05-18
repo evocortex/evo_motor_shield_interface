@@ -42,10 +42,16 @@ namespace evo_mbed {
 class Motor;
 
 /** \brief Supported communication version */
-constexpr float MOTOR_SHIELD_COM_VER = 1.0f;
+constexpr float MOTOR_SHIELD_COM_VER = 1.0F;
 
 /** \brief Number of drives on one shield */
-constexpr unsigned int MOTOR_SHIELD_DRIVES = 2u;
+constexpr unsigned int MOTOR_SHIELD_DRIVES = 2U;
+
+/** \brief Retry limit of reading/writing */
+constexpr unsigned int MOTOR_SHIELD_COM_RETRY_LIMIT = 1U;
+
+/** \brief Minimum update rate allowed */
+constexpr float MOTOR_SHIELD_MIN_UPDATE_RATE_HZ = 0.1F;
 
 /**
  * @brief States of the motor shield
@@ -136,7 +142,7 @@ class MotorShield
    /**
     * @brief Destructor of motorshield object
     */
-   ~MotorShield(void);
+   ~MotorShield();
 
    /**
     * @brief Initializes the motor shield
@@ -146,13 +152,13 @@ class MotorShield
     * @return true Success
     * @return false Error
     */
-   bool init(void);
+   bool init();
 
    /**
     * @brief Releases the object stops threads and releases
     *        memory
     */
-   void release(void);
+   void release();
 
    /**
     * @brief Synchronises the shield again with the host pc, by
@@ -163,7 +169,7 @@ class MotorShield
     * @return true
     * @return false
     */
-   bool resyncShield(void);
+   bool resyncShield();
 
    /**
     * @brief Sends request to perform a complete reset of the motorcontroller
@@ -171,7 +177,7 @@ class MotorShield
     * @return true
     * @return false
     */
-   bool resetShield(void);
+   bool resetShield();
 
    /**
     * @brief Set maximum communication timeout
@@ -203,83 +209,45 @@ class MotorShield
    std::shared_ptr<Motor> getMotor(const unsigned int id);
 
    /* Getters */
-   float getComID(void) const;
-   MotorShieldState getState(void) const;
+   unsigned int getComID() const;
+   MotorShieldState getState() const;
 
-   /** \brief Check if class is initialized */
-   bool isInitialized(void) const;
+   bool isShieldSynced() const;
+   bool isInitialized() const;
 
  private:
 
-   /**
-    * @brief Check if com version reported by firmware is compatible
-    */
+   bool checkInitConditions();
+   bool checkDeviceType();
+   bool checkFirmwareCompability();
+   bool readAdditionalData();
+   bool initMotors();
+   bool runInitialSync();
+   bool createUpdateThread();
+   void stopUpdateThread();
    bool isCOMVersionCompatible();
-
-   /**
-    * @brief Updates the motor shield
-    */
-   void updateHandler(void);
-
-   /**
-    * @brief Reads a constant data object
-    *
-    * @param object Object to read
-    *
-    * @return true Reading data was successful
-    * @return false Failed reading data
-    */
+   void printComError(const ComDataObject& object, const std::string& name, 
+                      const ComMsgErrorCodes& error_code);
+   void updateHandler();
    bool readConstObject(ComDataObject& object);
-
-   /**
-    * @brief Writes a data object via can
-    *
-    * @param object Object to write
-    * @param name Name of the object for logging
-    *
-    * @return true Successfully written value
-    * @return false Error during writting
-    */
    bool writeDataObject(ComDataObject& object, const std::string name);
+   void checkSyncStatus();
+   void checkShieldStatus();
+   uint32_t calcConfigCRC() const;
 
-   /**
-    * @brief Checks if shield and host is synchronized
-    */
-   void checkSyncStatus(void);
-
-   /**
-    * @brief Checks the current shield status
-    */
-   void checkShieldStatus(void);
-
-   /**
-    * @brief Calculates the CRC32 value of the
-    *        configuration parameters
-    *
-    * @return uint32_t CRC32 value of config
-    */
-   uint32_t calcConfigCRC(void);
-
-   /** \brief Used communication server */
    std::shared_ptr<ComServer> _com_server;
 
-   /** \brief Node ID of the client */
    const unsigned int _com_node_id = 0u;
 
-   /** \brief Update rate of the async data in hz */
    const double _update_rate_hz = 30.0f;
 
-   /** \brief Update thread for asnyc tx/rx */
    std::unique_ptr<std::thread> _update_thread;
 
-   /** \brief Set to false to stop update thread */
-   std::atomic<bool> _run_update;
+   std::atomic<bool> _run_update_thread;
 
-   /** \brief List containing motor objects */
    std::array<std::shared_ptr<Motor>, MOTOR_SHIELD_DRIVES> _motor_list;
 
-   /** \brief True if config on host and shield is synchronized */
-   std::atomic<bool> _is_shield_synced;
+   std::atomic<bool> _shield_synced;
 
    /** \brief Mutex for synchronization of communication access */
    std::mutex _com_mutex;
