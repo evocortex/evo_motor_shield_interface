@@ -218,6 +218,7 @@ class MotorShield
  private:
 
    bool checkInitConditions();
+   void resetVariables();
    bool checkDeviceType();
    bool checkFirmwareCompability();
    bool readAdditionalData();
