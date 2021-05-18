@@ -24,6 +24,7 @@
 
 #include <iomanip>
 #include <boost/crc.hpp>
+#include <math.h> 
 /*--------------------------------------------------------------------------------*/
 
 using namespace evo_mbed;
@@ -39,7 +40,7 @@ MotorShield::MotorShield(const uint8_t node_id,
                          std::shared_ptr<ComServer> com_server,
                          const double update_rate_hz, const bool logging) :
     _com_server(com_server),
-    _com_node_id(node_id), _update_rate_hz(update_rate_hz), _logging(true)
+    _com_node_id(node_id), _update_rate_hz(update_rate_hz), _logging(logging)
 {
    if(_logging)
    {
@@ -455,8 +456,8 @@ void MotorShield::stopUpdateThread()
 
 bool MotorShield::isCOMVersionCompatible()
 {
-   return std::floor(static_cast<float>(_do_com_version)) ==
-          std::floor(MOTOR_SHIELD_COM_VER);
+   return floor(static_cast<float>(_do_com_version)) ==
+          floor(MOTOR_SHIELD_COM_VER);
 }
 
 void MotorShield::printComError(const ComDataObject& object, const std::string& name, 
