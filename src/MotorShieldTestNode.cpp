@@ -80,11 +80,6 @@ class ROSMotor
       case MOTOR_TYPE_DRIVE:
       {
          msg_float.data = _motor->getRevolutions();
-
-         if(msg_float.data > 10.0f)
-         {
-            _motor->resetRevs(0.0f);
-         }
       }
       break;
 
